@@ -1,0 +1,202 @@
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    transition: background 0.3s ease;
+  }
+  
+  .login-page.dark-mode {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  }
+  
+  .login-container {
+    width: 100%;
+    max-width: 440px;
+    padding: 20px;
+  }
+  
+  .login-card {
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 24px;
+    padding: 48px 40px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+  }
+  
+  .dark-mode .login-card {
+    background: rgba(42, 42, 42, 0.95);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  }
+  
+  .login-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  
+  .login-logo {
+    font-size: 36px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--warning-yellow), #FFD54F);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+  
+  .dark-mode .login-logo {
+    background: linear-gradient(135deg, var(--warning-yellow), #FFD54F);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .login-tagline {
+    color: #666;
+    font-size: 15px;
+    font-weight: 500;
+    margin: 0;
+  }
+  
+  .dark-mode .login-tagline {
+    color: #aaa;
+  }
+  
+  .login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .input-group label {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    margin-left: 4px;
+  }
+  
+  .dark-mode .input-group label {
+    color: #ddd;
+  }
+  
+  .login-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e8e8e8;
+    border-radius: 12px;
+    font-size: 15px;
+    font-family: inherit;
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+  }
+  
+  .dark-mode .login-input {
+    background: #1a1a1a;
+    border-color: #404040;
+    color: #fff;
+  }
+  
+  .login-input:focus {
+    outline: none;
+    border-color: #667eea;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  }
+  
+  .dark-mode .login-input:focus {
+    background: #0a0a0a;
+    border-color: #8b9bff;
+    box-shadow: 0 0 0 4px rgba(139, 155, 255, 0.1);
+  }
+  
+  .login-input::placeholder {
+    color: #aaa;
+  }
+  
+  .dark-mode .login-input::placeholder {
+    color: #666;
+  }
+  
+  .login-error {
+    background: #fee;
+    color: #c33;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    text-align: center;
+    font-weight: 500;
+    border: 1px solid #fcc;
+  }
+  
+  .dark-mode .login-error {
+    background: rgba(255, 80, 80, 0.15);
+    color: #ff8080;
+    border-color: rgba(255, 80, 80, 0.3);
+  }
+  
+  .login-btn {
+    padding: 16px;
+    background: linear-gradient(135deg, var(--warning-yellow), #FFD54F);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+  
+  .login-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  }
+  
+  .login-btn:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  .login-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  .dark-mode .login-btn {
+    background: linear-gradient(135deg, var(--warning-yellow), #FFD54F);
+    box-shadow: 0 4px 15px rgba(139, 155, 255, 0.3);
+  }
+  
+  .dark-mode .login-btn:hover:not(:disabled) {
+    box-shadow: 0 6px 20px rgba(139, 155, 255, 0.4);
+  }
+  
+  .login-footer-text {
+    text-align: center;
+    margin-top: 32px;
+    color: #999;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  
+  .dark-mode .login-footer-text {
+    color: #666;
+  }
+  
+  /* Responsive */
+  @media (max-width: 480px) {
+    .login-card {
+      padding: 36px 28px;
+    }
+  
+    .login-logo {
+      font-size: 32px;
+    }
+  }

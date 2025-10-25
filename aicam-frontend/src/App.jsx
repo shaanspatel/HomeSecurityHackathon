@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './App.css';
-
+import Login from './Login';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 
@@ -23,6 +23,21 @@ function getCookie(name) {
 }
 
 export default function App() {
+  // ============ LOGIN STATE ============
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('aicam_authenticated') === 'true';
+  });
+
+  // If not logged in, show login page
+  if (!isLoggedIn) {
+    return <Login onLogin={() => setIsLoggedIn(true)} />;
+  }
+
+  // ============ EXISTING APP CODE ============
+  return <Dashboard />;
+}
+
+function Dashboard() {
   const videoRef = useRef(null);
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
@@ -38,7 +53,7 @@ export default function App() {
   const [lastUploadAt, setLastUploadAt] = useState(null);
   const [log, setLog] = useState([]);
   const [serverLogs, setServerLogs] = useState([]);
-  const [localClips, setLocalClips] = useState([]); // ADD THIS LINE
+  const [localClips, setLocalClips] = useState([]);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('aicam_dark_mode');
     return saved ? JSON.parse(saved) : false;
@@ -60,26 +75,19 @@ export default function App() {
     setIsDropdownOpen(!isDropdownOpen);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('aicam_authenticated');
+    localStorage.removeItem('aicam_username');
+    setIsDropdownOpen(false);
+    window.location.reload(); // Reload to show login page
+  };
+
   // Init device id + cookie
   useEffect(() => {
     let id = localStorage.getItem('aicam_device_id');
     if (!id) { id = uuid4Like(); localStorage.setItem('aicam_device_id', id); }
     setDeviceId(id);
     setCookie('aicam_session', id);
-
-    //mark offline if whoami fails
-    /*(async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/whoami`, { credentials: 'include' });
-        if (!res.ok) throw new Error('not ok');
-        const data = await res.json();
-        pushLog('whoami: ' + JSON.stringify(data));
-        setOfflineMode(false);
-      } catch (e) {
-        pushLog('Backend not detected — offline fallback enabled');
-        setOfflineMode(true);
-      }
-    })();*/
 
     return () => stopAll();
   }, []);
@@ -135,8 +143,8 @@ export default function App() {
 
   function stopAll() {
     stopRecording();
-    stopPreview(true); // Force stop preview even if recording was active
-    setStatus('idle'); // Ensure status is reset to idle
+    stopPreview(true);
+    setStatus('idle');
   }
 
   function startAll() {
@@ -167,7 +175,7 @@ export default function App() {
   }
 
   function stopPreview(force = false) {
-    if (isRecording && !force) return; // keep stream during recording unless forced
+    if (isRecording && !force) return;
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
@@ -180,14 +188,13 @@ export default function App() {
 
   async function startRecording() {
     if (isRecording) return;
-    if (!isPreviewing) await startPreview(); // ensure stream exists
+    if (!isPreviewing) await startPreview();
 
     try {
-      // Choose a supported mime
       const mimeCandidates = [
         'video/webm;codecs=vp8',
         'video/webm',
-        'video/mp4;codecs=avc1.42E01E', // may not be supported in all browsers
+        'video/mp4;codecs=avc1.42E01E',
       ];
       let recorder = null;
       for (const mt of mimeCandidates) {
@@ -218,14 +225,12 @@ export default function App() {
       setStatus('recording');
       pushLog('Protection mode activated! Recording everything safely');
 
-      // Seconds countdown (UI only)
       setCountdown(10);
       if (secondIntervalRef.current) clearInterval(secondIntervalRef.current);
       secondIntervalRef.current = setInterval(() => {
         setCountdown(prev => (prev > 1 ? prev - 1 : 10));
       }, 1000);
 
-      // Every 10 seconds, make a cut and restart recorder
       if (cutIntervalRef.current) clearInterval(cutIntervalRef.current);
       cutIntervalRef.current = setInterval(() => {
         setCountdown(10);
@@ -271,7 +276,6 @@ export default function App() {
   async function uploadClipWithFallback(blob, mimeType) {
     setStatus('uploading');
 
-    // If user forced offline or API call fails → fallback to local link
     const performFallback = () => {
       const url = URL.createObjectURL(blob);
       const name = `clip-${Date.now()}.${mimeType.includes('webm') ? 'webm' : 'mp4'}`;
@@ -280,15 +284,13 @@ export default function App() {
       pushLog('Saved locally for you: ' + name);
     };
 
-    //if (offlineMode) { performFallback(); return; }
-
     try {
       const form = new FormData();
       form.append('clip', blob, `clip-${Date.now()}.${mimeType.includes('webm') ? 'webm' : 'mp4'}`);
       form.append('device_id', deviceId || getCookie('aicam_session') || 'unknown');
 
       const ctrl = new AbortController();
-      const timeout = setTimeout(() => ctrl.abort(), 12_000); // 12s safety timeout
+      const timeout = setTimeout(() => ctrl.abort(), 12_000);
       const res = await fetch(`${API_BASE}/api/upload-clip`, { method: 'POST', body: form, credentials: 'include', signal: ctrl.signal });
       clearTimeout(timeout);
 
@@ -303,7 +305,6 @@ export default function App() {
     }
   }
 
-  // Status mapping for UI
   const getStatusInfo = () => {
     switch (status) {
       case 'idle':
@@ -349,12 +350,15 @@ export default function App() {
           <a href="/" className="logo">SafeVision</a>
           <div className="user-menu">
             <button className="avatar" onClick={toggleDropdown} title="User menu">
-              U
+              {localStorage.getItem('aicam_username')?.charAt(0).toUpperCase() || 'U'}
             </button>
             {isDropdownOpen && (
               <div className="dropdown-menu">
                 <button className="dropdown-item" onClick={toggleDarkMode}>
                   <span className="dropdown-text">{isDarkMode ? 'Light' : 'Dark'}</span>
+                </button>
+                <button className="dropdown-item" onClick={handleLogout}>
+                  <span className="dropdown-text">Logout</span>
                 </button>
               </div>
             )}
@@ -378,12 +382,6 @@ export default function App() {
           
           {/* Control Buttons */}
           <div className="controls">
-            {/*{!isPreviewing ? (
-              <button onClick={startPreview} className="btn-primary">Live View</button>
-            ) : (
-              <button onClick={stopPreview} className="btn-danger" disabled={isRecording}>Stop</button>
-            )*/}
-
             {!isRecording ? (
               <button onClick={startAll} className="btn-success"> Start Protecting</button>
             ) : (
@@ -392,19 +390,6 @@ export default function App() {
 
             <button onClick={manualCut} className="btn-warning" disabled={!isRecording}>Stop recording & Upload</button>
           </div>
-
-          {/* Offline Mode Toggle
-          <div style={{ marginTop: '20px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '14px', color: 'var(--text-secondary)', fontWeight: '500' }}>
-              <input 
-                type="checkbox" 
-                checked={offlineMode} 
-                onChange={(e) => setOfflineMode(e.target.checked)}
-                style={{ accentColor: 'var(--primary-blue)', transform: 'scale(1.2)' }}
-              />
-              Offline mode
-            </label>
-          </div>*/}
         </div>
 
         {/* Video Container */}
