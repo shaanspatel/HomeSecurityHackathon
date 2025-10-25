@@ -37,7 +37,7 @@ export default function App() {
   const [countdown, setCountdown] = useState(10);
   const [lastUploadAt, setLastUploadAt] = useState(null);
   const [log, setLog] = useState([]);
-  const [offlineMode, setOfflineMode] = useState(false);
+  //const [offlineMode, setOfflineMode] = useState(false);
   const [localClips, setLocalClips] = useState([]); // {url, name, size}
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('aicam_dark_mode');
@@ -68,7 +68,7 @@ export default function App() {
     setCookie('aicam_session', id);
 
     //mark offline if whoami fails
-    (async () => {
+    /*(async () => {
       try {
         const res = await fetch(`${API_BASE}/api/whoami`, { credentials: 'include' });
         if (!res.ok) throw new Error('not ok');
@@ -79,7 +79,7 @@ export default function App() {
         pushLog('Backend not detected — offline fallback enabled');
         setOfflineMode(true);
       }
-    })();
+    })();*/
 
     return () => stopAll();
   }, []);
@@ -107,7 +107,13 @@ export default function App() {
 
   function stopAll() {
     stopRecording();
-    stopPreview();
+    stopPreview(true); // Force stop preview even if recording was active
+    setStatus('idle'); // Ensure status is reset to idle
+  }
+
+  function startAll() {
+    startPreview();
+    startRecording();
   }
 
   async function startPreview() {
@@ -132,8 +138,8 @@ export default function App() {
     }
   }
 
-  function stopPreview() {
-    if (isRecording) return; // keep stream during recording
+  function stopPreview(force = false) {
+    if (isRecording && !force) return; // keep stream during recording unless forced
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
@@ -141,7 +147,6 @@ export default function App() {
     if (videoRef.current) videoRef.current.srcObject = null;
     if (secondIntervalRef.current) { clearInterval(secondIntervalRef.current); secondIntervalRef.current = null; }
     setIsPreviewing(false);
-    if (!isRecording) setStatus('idle');
     pushLog('Camera is taking a break');
   }
 
@@ -219,7 +224,6 @@ export default function App() {
       recorderRef.current = null;
     }
     setIsRecording(false);
-    setStatus(isPreviewing ? 'previewing' : 'idle');
     pushLog('Protection mode stopped - your space is safe');
   }
 
@@ -248,7 +252,7 @@ export default function App() {
       pushLog('Saved locally for you: ' + name);
     };
 
-    if (offlineMode) { performFallback(); return; }
+    //if (offlineMode) { performFallback(); return; }
 
     try {
       const form = new FormData();
@@ -282,7 +286,7 @@ export default function App() {
       case 'previewing':
         return { 
           type: 'safe', 
-          title: 'Everything Looks Great! ✨', 
+          title: 'Everything Looks Great!', 
         };
       case 'recording':
         return { 
@@ -322,8 +326,7 @@ export default function App() {
             {isDropdownOpen && (
               <div className="dropdown-menu">
                 <button className="dropdown-item" onClick={toggleDarkMode}>
-                  <span className="dropdown-icon">{isDarkMode ? '☀️' : '🌙'}</span>
-                  <span className="dropdown-text">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
+                  <span className="dropdown-text">{isDarkMode ? 'Light' : 'Dark'}</span>
                 </button>
               </div>
             )}
@@ -347,22 +350,22 @@ export default function App() {
           
           {/* Control Buttons */}
           <div className="controls">
-            {!isPreviewing ? (
+            {/*{!isPreviewing ? (
               <button onClick={startPreview} className="btn-primary">Live View</button>
             ) : (
               <button onClick={stopPreview} className="btn-danger" disabled={isRecording}>Stop</button>
-            )}
+            )}*/}
 
             {!isRecording ? (
-              <button onClick={startRecording} className="btn-success"> Start Protecting</button>
+              <button onClick={startAll} className="btn-success"> Start Protecting</button>
             ) : (
-              <button onClick={stopRecording} className="btn-danger"> Stop</button>
+              <button onClick={stopAll} className="btn-danger"> Stop</button>
             )}
 
-            <button onClick={manualCut} className="btn-warning" disabled={!isRecording}>Start recording & Upload</button>
+            <button onClick={manualCut} className="btn-warning" disabled={!isRecording}>Stop recording & Upload</button>
           </div>
 
-          {/* Offline Mode Toggle */}
+          {/* Offline Mode Toggle
           <div style={{ marginTop: '20px' }}>
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '14px', color: 'var(--text-secondary)', fontWeight: '500' }}>
               <input 
@@ -373,7 +376,7 @@ export default function App() {
               />
               Offline mode
             </label>
-          </div>
+          </div>*/}
         </div>
 
         {/* Video Container */}
@@ -401,10 +404,20 @@ export default function App() {
           </div>
         )}
 
+        {/* History Log */}
+        <div className="history-section">
+          <h3 className="history-title">What's Been Happening</h3>
+          <div className="history-log">
+            {log.map((entry, i) => (
+              <div key={i} className="history-item">{entry}</div>
+            ))}
+          </div>
+        </div>
+        
         {/* Local Clips */}
         {localClips.length > 0 && (
-          <div className="local-clips">
-            <h3 className="history-title">Your Saved Memories</h3>
+        <div className="local-clips">
+          <h3 className="history-title">Your Saved Memories</h3>
             {localClips.map((clip, i) => (
               <div key={i} className="clip-item">
                 <div className="clip-info">
@@ -421,18 +434,8 @@ export default function App() {
                 </a>
               </div>
             ))}
-          </div>
-        )}
-
-        {/* History Log */}
-        <div className="history-section">
-          <h3 className="history-title">What's Been Happening</h3>
-          <div className="history-log">
-            {log.map((entry, i) => (
-              <div key={i} className="history-item">{entry}</div>
-            ))}
-          </div>
         </div>
+        )}
 
         {/* Footer */}
         <div className="footer">
