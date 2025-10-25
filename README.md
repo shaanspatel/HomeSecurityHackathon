@@ -1,2 +1,1 @@
 # HomeSecurityHackathon
-# HomeSecurityHackathon

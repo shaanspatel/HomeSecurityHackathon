@@ -283,25 +283,21 @@ export default function App() {
         return { 
           type: 'safe', 
           title: 'Everything Looks Great! ✨', 
-          subtitle: 'Your camera is watching over your space',
         };
       case 'recording':
         return { 
           type: 'warning', 
           title: 'Keeping Watch', 
-          subtitle: 'Recording and analyzing everything for your safety',
         };
       case 'uploading':
         return { 
           type: 'warning', 
           title: 'Sending Updates', 
-          subtitle: 'Sharing what I see with the system',
         };
       case 'error':
         return { 
           type: 'danger', 
           title: 'Oops! Something\'s Up', 
-          subtitle: 'Let me help you fix this camera issue',
         };
       default:
         return { 
