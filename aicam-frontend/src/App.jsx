@@ -31,14 +31,14 @@ export default function App() {
   const chunksRef = useRef([]);
 
   const [deviceId, setDeviceId] = useState('');
-  const [status, setStatus] = useState('idle'); // idle | previewing | recording | uploading | error
+  const [status, setStatus] = useState('idle');
   const [isRecording, setIsRecording] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [countdown, setCountdown] = useState(10);
   const [lastUploadAt, setLastUploadAt] = useState(null);
   const [log, setLog] = useState([]);
-  //const [offlineMode, setOfflineMode] = useState(false);
-  const [localClips, setLocalClips] = useState([]); // {url, name, size}
+  const [serverLogs, setServerLogs] = useState([]);
+  const [localClips, setLocalClips] = useState([]); // ADD THIS LINE
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('aicam_dark_mode');
     return saved ? JSON.parse(saved) : false;
@@ -104,6 +104,34 @@ export default function App() {
       document.body.classList.remove('dark-mode');
     }
   }, [isDarkMode]);
+
+  // Fetch SecurityEventsLog for stream "general_watch"
+  useEffect(() => {
+    let stopped = false;
+
+    const fetchLogs = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/logs?stream_id=general_watch`, { credentials: 'include' });
+        if (!res.ok) throw new Error('logs fetch failed: ' + res.status);
+        const data = await res.json();
+        const items = Array.isArray(data.items) ? data.items : [];
+        const lines = items.map((it) => {
+          const ts = it.timestamp ? new Date(it.timestamp).toLocaleString() : '';
+          const sev = (it.severity || 'log').toUpperCase();
+          const type = it.threat_type || 'other';
+          const summary = it.summary || '';
+          return `[${ts}] ${sev} (${type}) ${summary}`;
+        });
+        if (!stopped) setServerLogs(lines);
+      } catch (e) {
+        // optional: pushLog('Failed to fetch logs: ' + e.message);
+      }
+    };
+
+    fetchLogs();
+    const t = setInterval(fetchLogs, 10000); // poll every 10s
+    return () => { stopped = true; clearInterval(t); };
+  }, []);
 
   function stopAll() {
     stopRecording();
@@ -354,7 +382,7 @@ export default function App() {
               <button onClick={startPreview} className="btn-primary">Live View</button>
             ) : (
               <button onClick={stopPreview} className="btn-danger" disabled={isRecording}>Stop</button>
-            )}*/}
+            )*/}
 
             {!isRecording ? (
               <button onClick={startAll} className="btn-success"> Start Protecting</button>
@@ -408,7 +436,7 @@ export default function App() {
         <div className="history-section">
           <h3 className="history-title">What's Been Happening</h3>
           <div className="history-log">
-            {log.map((entry, i) => (
+            {[...serverLogs, ...log].map((entry, i) => (
               <div key={i} className="history-item">{entry}</div>
             ))}
           </div>
