@@ -1,11 +1,57 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* Apple Health/HomeKit Design System */
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* Warm & Welcoming Color Palette */
+  --bg-primary: #FEFEFE;
+  --bg-secondary: #F8F6F0;
+  --bg-warm: linear-gradient(135deg, #FFF8F0 0%, #F0F8FF 100%);
+  --text-primary: #2D2D2D;
+  --text-secondary: #6B6B6B;
+  --text-warm: #8B4513;
+  --safe-green: #4CAF50;
+  --safe-green-light: #E8F5E8;
+  --warning-yellow: #FFB74D;
+  --warning-yellow-light: #FFF8E1;
+  --danger-red: #F44336;
+  --danger-red-light: #FFEBEE;
+  --primary-blue: #64B5F6;
+  --primary-blue-light: #E3F2FD;
+  --accent-coral: #FF8A80;
+  --accent-mint: #A5D6A7;
+  --border-light: #E8E8E8;
+  --border-warm: #D4C4A8;
+  --shadow-warm: rgba(139, 69, 19, 0.1);
+  --shadow-soft: rgba(0, 0, 0, 0.05);
+
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+}
+
+/* Dark Mode Variables */
+.dark-mode {
+  --bg-primary: #1A1A1A;
+  --bg-secondary: #2D2D2D;
+  --bg-warm: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
+  --text-primary: #E8E8E8;
+  --text-secondary: #B0B0B0;
+  --text-warm: #D4C4A8;
+  --safe-green: #66BB6A;
+  --safe-green-light: #2E4A2E;
+  --warning-yellow: #FFB74D;
+  --warning-yellow-light: #4A3A1A;
+  --danger-red: #EF5350;
+  --danger-red-light: #4A1A1A;
+  --primary-blue: #42A5F5;
+  --primary-blue-light: #1A3A4A;
+  --accent-coral: #FF8A80;
+  --accent-mint: #81C784;
+  --border-light: #404040;
+  --border-warm: #5A5A5A;
+  --shadow-warm: rgba(0, 0, 0, 0.3);
+  --shadow-soft: rgba(0, 0, 0, 0.2);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,56 +59,181 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background: var(--bg-warm);
+  transition: background 0.3s ease;
+}
+
+/* Typography */
+h1, h2, h3 {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
 }
 
 h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+  font-size: 2.5rem;
+  font-weight: 600;
 }
 
+h2 {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+p {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Buttons */
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+  border-radius: 16px;
+  border: none;
+  padding: 14px 28px;
+  font-size: 1rem;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.3px;
+  text-transform: none;
+  box-shadow: 0 4px 12px var(--shadow-soft);
+  position: relative;
+  overflow: hidden;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+button:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 20px var(--shadow-warm);
+}
+
+button:active {
+  transform: translateY(0) scale(0.98);
+  transition: all 0.1s ease;
+}
+
+button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s ease;
+}
+
+button:hover::before {
+  left: 100%;
+}
+
+button:focus,
+button:focus-visible {
+  outline: 2px solid var(--primary-blue);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Animations */
+@keyframes pulse-glow-warm {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 183, 77, 0.4);
+    transform: scale(1);
   }
-  a:hover {
-    color: #747bff;
+  50% {
+    box-shadow: 0 0 0 25px rgba(255, 183, 77, 0);
+    transform: scale(1.05);
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+@keyframes pulse-glow-red-warm {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4);
+    transform: scale(1);
   }
+  50% {
+    box-shadow: 0 0 0 25px rgba(244, 67, 54, 0);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.8);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(-10px) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(1deg); }
+  75% { transform: rotate(-1deg); }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Glass morphism effect */
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Utility classes */
+.text-center { text-align: center; }
+.text-secondary { color: var(--text-secondary); }
+.font-light { font-weight: 300; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+
+/* Smooth transitions */
+* {
+  transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
 }

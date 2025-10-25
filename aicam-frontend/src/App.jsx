@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import './App.css';
+
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 
@@ -37,9 +39,25 @@ export default function App() {
   const [log, setLog] = useState([]);
   const [offlineMode, setOfflineMode] = useState(false);
   const [localClips, setLocalClips] = useState([]); // {url, name, size}
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('aicam_dark_mode');
+    return saved ? JSON.parse(saved) : false;
+  });
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const pushLog = (msg) => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 300));
+  };
+
+  const toggleDarkMode = () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    localStorage.setItem('aicam_dark_mode', JSON.stringify(newMode));
+    setIsDropdownOpen(false);
+  };
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
   };
 
   // Init device id + cookie
@@ -66,6 +84,27 @@ export default function App() {
     return () => stopAll();
   }, []);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isDropdownOpen && !event.target.closest('.user-menu')) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDropdownOpen]);
+
+  // Apply dark mode to body
+  useEffect(() => {
+    if (isDarkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }, [isDarkMode]);
+
   function stopAll() {
     stopRecording();
     stopPreview();
@@ -86,7 +125,7 @@ export default function App() {
       }
       setIsPreviewing(true);
       setStatus('previewing');
-      pushLog('Live preview started.');
+      pushLog('Camera is now watching your space!');
     } catch (e) {
       setStatus('error');
       pushLog('getUserMedia failed: ' + e.message);
@@ -103,7 +142,7 @@ export default function App() {
     if (secondIntervalRef.current) { clearInterval(secondIntervalRef.current); secondIntervalRef.current = null; }
     setIsPreviewing(false);
     if (!isRecording) setStatus('idle');
-    pushLog('Live preview stopped.');
+    pushLog('Camera is taking a break');
   }
 
   async function startRecording() {
@@ -144,7 +183,7 @@ export default function App() {
       recorderRef.current = recorder;
       setIsRecording(true);
       setStatus('recording');
-      pushLog('Recording started with mimeType: ' + recorder.mimeType);
+      pushLog('Protection mode activated! Recording everything safely');
 
       // Seconds countdown (UI only)
       setCountdown(10);
@@ -181,7 +220,7 @@ export default function App() {
     }
     setIsRecording(false);
     setStatus(isPreviewing ? 'previewing' : 'idle');
-    pushLog('Recording stopped.');
+    pushLog('Protection mode stopped - your space is safe');
   }
 
   async function manualCut() {
@@ -191,7 +230,7 @@ export default function App() {
       recorderRef.current.stop();
       recorderRef.current.start();
       setCountdown(10);
-      pushLog('Manual cut requested.');
+      pushLog('Quick snapshot captured!');
     } catch (e) {
       pushLog('Manual cut failed: ' + e.message);
     }
@@ -206,7 +245,7 @@ export default function App() {
       const name = `clip-${Date.now()}.${mimeType.includes('webm') ? 'webm' : 'mp4'}`;
       setLocalClips(prev => [{ url, name, size: blob.size }, ...prev].slice(0, 50));
       setStatus('recording');
-      pushLog('Saved locally (offline fallback): ' + name);
+      pushLog('Saved locally for you: ' + name);
     };
 
     if (offlineMode) { performFallback(); return; }
@@ -225,95 +264,185 @@ export default function App() {
       const json = await res.json().catch(() => ({}));
       setLastUploadAt(new Date());
       setStatus('recording');
-      pushLog('Uploaded 10s clip ✓ ' + JSON.stringify(json));
+      pushLog('Successfully shared update with the system!');
     } catch (e) {
       pushLog('Upload error, falling back local: ' + e.message);
       performFallback();
     }
   }
 
+  // Status mapping for UI
+  const getStatusInfo = () => {
+    switch (status) {
+      case 'idle':
+        return { 
+          type: 'idle', 
+          title: 'Welcome Home!', 
+        };
+      case 'previewing':
+        return { 
+          type: 'safe', 
+          title: 'Everything Looks Great! ✨', 
+          subtitle: 'Your camera is watching over your space',
+        };
+      case 'recording':
+        return { 
+          type: 'warning', 
+          title: 'Keeping Watch', 
+          subtitle: 'Recording and analyzing everything for your safety',
+        };
+      case 'uploading':
+        return { 
+          type: 'warning', 
+          title: 'Sending Updates', 
+          subtitle: 'Sharing what I see with the system',
+        };
+      case 'error':
+        return { 
+          type: 'danger', 
+          title: 'Oops! Something\'s Up', 
+          subtitle: 'Let me help you fix this camera issue',
+        };
+      default:
+        return { 
+          type: 'idle', 
+          title: 'Welcome Home!', 
+        };
+    }
+  };
+
+  const statusInfo = getStatusInfo();
+
   return (
-    <div className="min-h-screen w-full flex flex-col items-center gap-4 p-4" style={{ fontFamily: 'Inter, system-ui, Arial, sans-serif' }}>
-
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        {!isPreviewing ? (
-          <button onClick={startPreview} style={btn('neutral')}>Show Live</button>
-        ) : (
-          <button onClick={stopPreview} style={btn('danger')} disabled={isRecording}>Hide Live</button>
-        )}
-
-        {!isRecording ? (
-          <button onClick={startRecording} style={btn('primary')}>Start (10s clips)</button>
-        ) : (
-          <button onClick={stopRecording} style={btn('danger')}>Stop</button>
-        )}
-
-        <button onClick={manualCut} style={btn('info')} disabled={!isRecording}>Cut & Upload Now</button>
-
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
-          <input type="checkbox" checked={offlineMode} onChange={(e) => setOfflineMode(e.target.checked)} />
-          Offline mode (save locally)
-        </label>
-      </div>
-
-      <div style={{ fontSize: 14, color: '#555' }}>
-        <div>Status: <b>{status}</b>{lastUploadAt ? ` — last upload: ${lastUploadAt.toLocaleTimeString()}` : ''}</div>
-        {/*<div>Device ID: <code>{deviceId}</code></div>
-        <div>Cookie: <code>{getCookie('aicam_session') || '(not set)'}</code></div>*/}
-      </div>
-
-      <div style={{ width: 640 }}>
-        <video ref={videoRef} playsInline muted autoPlay style={{ width: '100%', height: 360, background: '#000', borderRadius: 8 }} />
-        {/* Countdown bar & label */}
-        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
-          <div style={{ width: 520, height: 8, background: '#e5e7eb', borderRadius: 9999, overflow: 'hidden' }}>
-            <div style={{ width: `${((10 - countdown) / 10) * 100}%`, height: '100%', background: '#16a34a', transition: 'width 0.25s linear' }} />
+    <div className={`app ${isDarkMode ? 'dark-mode' : ''}`}>
+      {/* Header */}
+      <header className="header">
+        <div className="header-content">
+          <a href="/" className="logo">SafeVision</a>
+          <div className="user-menu">
+            <button className="avatar" onClick={toggleDropdown} title="User menu">
+              U
+            </button>
+            {isDropdownOpen && (
+              <div className="dropdown-menu">
+                <button className="dropdown-item" onClick={toggleDarkMode}>
+                  <span className="dropdown-icon">{isDarkMode ? '☀️' : '🌙'}</span>
+                  <span className="dropdown-text">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
+                </button>
+              </div>
+            )}
           </div>
-          <div style={{ minWidth: 110, textAlign: 'right' }}>next send: <b>{countdown}s</b></div>
         </div>
-      </div>
+      </header>
 
-      {/* Local fallback clips list */}
-      {localClips.length > 0 && (
-        <section style={{ width: 640 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 12 }}>Local clips (offline fallback)</h3>
-          <div style={{ display: 'grid', gap: 8 }}>
-            {localClips.map((c, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 8, border: '1px solid #e5e7eb', borderRadius: 8 }}>
-                <div style={{ fontSize: 12 }}>
-                  <div><b>{c.name}</b></div>
-                  <div style={{ color: '#6b7280' }}>{(c.size / (1024 * 1024)).toFixed(2)} MB</div>
+      {/* Main Dashboard */}
+      <main className="dashboard">
+        {/* Status Card */}
+        <div className="status-card">
+          {status !== 'idle' && (
+            <div className={`status-indicator ${statusInfo.type}`}>
+              {statusInfo.icon}
+            </div>
+          )}
+          <h1 className="status-title">{statusInfo.title}</h1>
+          {statusInfo.subtitle && (
+            <p className="status-subtitle">{statusInfo.subtitle}</p>
+          )}
+          
+          {/* Control Buttons */}
+          <div className="controls">
+            {!isPreviewing ? (
+              <button onClick={startPreview} className="btn-primary">Live View</button>
+            ) : (
+              <button onClick={stopPreview} className="btn-danger" disabled={isRecording}>Stop</button>
+            )}
+
+            {!isRecording ? (
+              <button onClick={startRecording} className="btn-success"> Start Protecting</button>
+            ) : (
+              <button onClick={stopRecording} className="btn-danger"> Stop</button>
+            )}
+
+            <button onClick={manualCut} className="btn-warning" disabled={!isRecording}>Start recording & Upload</button>
+          </div>
+
+          {/* Offline Mode Toggle */}
+          <div style={{ marginTop: '20px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '14px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+              <input 
+                type="checkbox" 
+                checked={offlineMode} 
+                onChange={(e) => setOfflineMode(e.target.checked)}
+                style={{ accentColor: 'var(--primary-blue)', transform: 'scale(1.2)' }}
+              />
+              Offline mode
+            </label>
+          </div>
+        </div>
+
+        {/* Video Container */}
+        {isPreviewing && (
+          <div className="video-container">
+            <video 
+              ref={videoRef} 
+              playsInline 
+              muted 
+              autoPlay 
+              className="video"
+            />
+            {/* Progress Bar */}
+            <div className="progress-container">
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill" 
+                  style={{ width: `${((10 - countdown) / 10) * 100}%` }}
+                />
+              </div>
+              <div className="progress-text">
+                Next update in: <strong>{countdown}s</strong>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Local Clips */}
+        {localClips.length > 0 && (
+          <div className="local-clips">
+            <h3 className="history-title">Your Saved Memories</h3>
+            {localClips.map((clip, i) => (
+              <div key={i} className="clip-item">
+                <div className="clip-info">
+                  <div className="clip-name">{clip.name}</div>
+                  <div className="clip-size">{(clip.size / (1024 * 1024)).toFixed(2)} MB</div>
                 </div>
-                <a href={c.url} download={c.name} style={{ ...btn('primary'), textDecoration: 'none', padding: '6px 10px' }}>Download</a>
+                <a 
+                  href={clip.url} 
+                  download={clip.name} 
+                  className="btn-primary"
+                  style={{ textDecoration: 'none', padding: '8px 16px' }}
+                >
+                  Download
+                </a>
               </div>
             ))}
           </div>
-        </section>
-      )}
+        )}
 
-      <section style={{ width: 640 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 12 }}>Logs</h3>
-        <div style={{ height: 200, overflow: 'auto', border: '1px solid #e5e7eb', borderRadius: 8, padding: 8, background: '#fafafa' }}>
-          {log.map((l, i) => (
-            <div key={i} style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12 }}>{l}</div>
-          ))}
+        {/* History Log */}
+        <div className="history-section">
+          <h3 className="history-title">What's Been Happening</h3>
+          <div className="history-log">
+            {log.map((entry, i) => (
+              <div key={i} className="history-item">{entry}</div>
+            ))}
+          </div>
         </div>
-      </section>
 
-      {/*<footer style={{ fontSize: 12, color: '#6b7280', marginTop: 8 }}>
-        This demo uses MediaRecorder (WebM/VP8) and falls back to local downloads if the backend is unavailable.
-      </footer>*/}
+        {/* Footer */}
+        <div className="footer">
+          Your home is being watched over – updates every 10 seconds
+        </div>
+      </main>
     </div>
   );
-}
-
-function btn(tone) {
-  const base = {
-    color: 'white', border: 'none', padding: '10px 14px', borderRadius: 10,
-    cursor: 'pointer', fontWeight: 600
-  };
-  if (tone === 'primary') return { ...base, background: '#16a34a' };
-  if (tone === 'danger') return { ...base, background: '#b91c1c' };
-  if (tone === 'info') return { ...base, background: '#0ea5e9' };
-  return { ...base, background: '#6b7280' };
 }
