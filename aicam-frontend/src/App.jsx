@@ -3,6 +3,7 @@ import './App.css';
 import Login from './Login';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
+const EXPRESS_API_BASE = import.meta.env.VITE_EXPRESS_API_BASE || 'http://localhost:3000';
 
 function uuid4Like() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -192,9 +193,10 @@ function Dashboard() {
 
     try {
       const mimeCandidates = [
+        'video/mp4;codecs=avc1.42E01E',
+        'video/mp4',
         'video/webm;codecs=vp8',
         'video/webm',
-        'video/mp4;codecs=avc1.42E01E',
       ];
       let recorder = null;
       for (const mt of mimeCandidates) {
@@ -278,7 +280,7 @@ function Dashboard() {
 
     const performFallback = () => {
       const url = URL.createObjectURL(blob);
-      const name = `clip-${Date.now()}.${mimeType.includes('webm') ? 'webm' : 'mp4'}`;
+      const name = `clip-${Date.now()}.mp4`;
       setLocalClips(prev => [{ url, name, size: blob.size }, ...prev].slice(0, 50));
       setStatus('recording');
       pushLog('Saved locally for you: ' + name);
@@ -286,12 +288,12 @@ function Dashboard() {
 
     try {
       const form = new FormData();
-      form.append('clip', blob, `clip-${Date.now()}.${mimeType.includes('webm') ? 'webm' : 'mp4'}`);
+      form.append('clip', blob, `clip-${Date.now()}.mp4`);
       form.append('device_id', deviceId || getCookie('aicam_session') || 'unknown');
 
       const ctrl = new AbortController();
       const timeout = setTimeout(() => ctrl.abort(), 12_000);
-      const res = await fetch(`${API_BASE}/api/upload-clip`, { method: 'POST', body: form, credentials: 'include', signal: ctrl.signal });
+      const res = await fetch(`${EXPRESS_API_BASE}/api/upload-clip`, { method: 'POST', body: form, credentials: 'include', signal: ctrl.signal });
       clearTimeout(timeout);
 
       if (!res.ok) throw new Error('upload failed: ' + res.status);
