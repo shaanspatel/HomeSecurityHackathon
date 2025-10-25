@@ -234,7 +234,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center gap-4 p-4" style={{ fontFamily: 'Inter, system-ui, Arial, sans-serif' }}>
-      <h1 style={{ fontSize: 24, fontWeight: 700 }}>I LOVE DICKKKKKK</h1>
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         {!isPreviewing ? (
@@ -259,8 +258,8 @@ export default function App() {
 
       <div style={{ fontSize: 14, color: '#555' }}>
         <div>Status: <b>{status}</b>{lastUploadAt ? ` — last upload: ${lastUploadAt.toLocaleTimeString()}` : ''}</div>
-        <div>Device ID: <code>{deviceId}</code></div>
-        <div>Cookie: <code>{getCookie('aicam_session') || '(not set)'}</code></div>
+        {/*<div>Device ID: <code>{deviceId}</code></div>
+        <div>Cookie: <code>{getCookie('aicam_session') || '(not set)'}</code></div>*/}
       </div>
 
       <div style={{ width: 640 }}>
@@ -301,9 +300,9 @@ export default function App() {
         </div>
       </section>
 
-      <footer style={{ fontSize: 12, color: '#6b7280', marginTop: 8 }}>
+      {/*<footer style={{ fontSize: 12, color: '#6b7280', marginTop: 8 }}>
         This demo uses MediaRecorder (WebM/VP8) and falls back to local downloads if the backend is unavailable.
-      </footer>
+      </footer>*/}
     </div>
   );
 }
