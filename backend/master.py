@@ -1,105 +1,204 @@
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
-import base64, json
+import boto3
+import base64
+import json
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from decimal import Decimal
 from vapi import Vapi
 from nova import Nova
-
-"""
-### SETUP INFO ###
-1) You need to make sure you have an AWS IAM user with Bedrock permissions set up. Or else this will not work.
-2) Open a vapi account and get an API key and phone number ID for making calls, the code handles creating an assistant for you.
-3) Make sure you have a MongoDB database set up to store the logs and video metadata. Right now its hooked up to my free tier cluster but you can change the mongo_uri to ur own
-"""
+from credentials import (
+    VAPI_API_KEY, 
+    VAPI_PHONE_NUMBER_ID, 
+    DEFAULT_CRITICAL_PHONE_NUMBER,
+    AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY,
+    DYNAMODB_REGION,
+    DYNAMODB_METADATA_TABLE,
+    DYNAMODB_LOGS_TABLE,
+    S3_BUCKET_NAME,
+    S3_REGION
+)
 
 class master:
     """
-    The only functions you need to worry about are create_stream, get_stream, delete_stream, and analyze.
+    Streams are model-driven. Provide optional 'context' (environment); no hardcoded cases.
+    Uses DynamoDB + S3 (videos stored in S3, metadata/logs in DynamoDB).
     """
-    def __init__(self, vapi_key, phone_no_id, mongo_uri="mongodb+srv://user:hamster@logs-and-video.guiiytv.mongodb.net/?appName=logs-and-video"):
+    def __init__(self, vapi_key, phone_no_id):
         self.phone_no_id = phone_no_id
         self.vapi_client = Vapi(token=vapi_key)
-        self.client = MongoClient(mongo_uri, server_api=ServerApi('1'))
+        
+        # DynamoDB client
+        self.dynamodb = boto3.resource(
+            'dynamodb',
+            region_name=DYNAMODB_REGION,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+        )
+        self.metadata_table = self.dynamodb.Table(DYNAMODB_METADATA_TABLE)
+        self.logs_table = self.dynamodb.Table(DYNAMODB_LOGS_TABLE)
+        
+        # S3 client
+        self.s3_client = boto3.client(
+            's3',
+            region_name=S3_REGION,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+        )
+        self.s3_bucket = S3_BUCKET_NAME
+        
         self.ids = {}
-        self.db = self.client['logs_and_video']
         self.nova_client = Nova()
-    
-    def create_stream(self, id, job_description, log_cases, critical_cases, critical_phone_number):
-        """
-        This function creates a new stream to monitor
-        Args:
-            id (str): The unique ID for the stream
-            job_description (str): A description of what is being surveilled (e.g. "a retail store entrance")
-            log_cases (list): A list of cases that should be logged as "log"
-            critical_cases (list): A list of cases that should be logged as "critical"
-            critical_phone_number (str): The phone number to call in case of a critical event
-        """
+
+    def create_stream(self, id: str, context: str | None = None, critical_phone_number: str | None = None):
         if id in self.ids:
             return {"Error": "Stream ID already exists"}
+        
         self.ids[id] = {
-            "job_description": job_description,
-            "log_cases": log_cases,
-            "critical_cases": critical_cases,
-            "critical_phone_number": critical_phone_number
+            "context": context,
+            "critical_phone_number": critical_phone_number or DEFAULT_CRITICAL_PHONE_NUMBER
         }
-        self.db['metadata'].insert_one({
-            "id": id,
-            "job_description": job_description,
-            "log_cases": log_cases,
-            "critical_cases": critical_cases,
-            "critical_phone_number": critical_phone_number
-        })
-    
+        
+        # Store in DynamoDB
+        self.metadata_table.put_item(
+            Item={
+                "id": id,
+                "context": context or "",
+                "critical_phone_number": self.ids[id]["critical_phone_number"]
+            }
+        )
+        print(f"[STREAM CREATED] {id}")
+
     def get_stream(self, id):
-        """
-        Returns all the data for a specific stream
-        """
-        if id not in self.ids:
-            return {"Error": "Stream ID not found"}
-        meta = self.db['metadata'].find_one({"id": id})
-        it = self.db[id].find()
-        return {'metadata': meta, 'logs': list(it)}
+        # Get metadata
+        meta_response = self.metadata_table.get_item(Key={"id": id})
+        metadata = meta_response.get("Item", {})
+        
+        # Query all logs for this stream
+        try:
+            logs_response = self.logs_table.query(
+                KeyConditionExpression='stream_id = :sid',
+                ExpressionAttributeValues={':sid': id}
+            )
+            logs = logs_response.get("Items", [])
+        except Exception as e:
+            print(f"[WARNING] Could not query logs: {e}")
+            logs = []
+        
+        return {"metadata": metadata, "logs": logs}
 
     def delete_stream(self, id):
         if id not in self.ids:
             return 1
+        
+        # Delete metadata
+        self.metadata_table.delete_item(Key={"id": id})
+        
+        # Delete all logs for this stream
+        try:
+            logs_response = self.logs_table.query(
+                KeyConditionExpression='stream_id = :sid',
+                ExpressionAttributeValues={':sid': id}
+            )
+            for log in logs_response.get("Items", []):
+                self.logs_table.delete_item(
+                    Key={
+                        "stream_id": id,
+                        "timestamp": log["timestamp"]
+                    }
+                )
+                # Delete S3 video if exists
+                if "s3_key" in log:
+                    try:
+                        self.s3_client.delete_object(Bucket=self.s3_bucket, Key=log["s3_key"])
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        
         del self.ids[id]
-        self.db[id].drop()
-        self.db['metadata'].delete_one({"id": id})
+        print(f"[STREAM DELETED] {id}")
         return 0
 
-    def analyze(self, id, video_bytes, timestamp):
-        """
-        This function analyses the video bytes using Nova and logs it if it is not normal.
-        Args:
-            id (str): The stream ID (You made this when you created the stream)
-            video_bytes (bytes): The video bytes to analyze (base64 encoded)
-            timestamp (str): The timestamp of the video.
-        """
-        video_desc = self.nova_client.describe_video(video_bytes, self.ids[id]['job_description'])
-        json_response = self.nova_client.call(self.ids[id]['job_description'], 
-                                              self.ids[id]['log_cases'], self.ids[id]['critical_cases'],
-                                              video_desc)
-        response = json.loads(json_response)
-        if response['severity'] != 'normal':
-            self.log(id, timestamp, response['severity'], response['description'], video_bytes)
-            if response['severity'] == 'critical' and self.ids[id]['critical_phone_number'] is not None:
-                self.vapi_call(self.ids[id]['critical_phone_number'], timestamp, response['description'])
+    def analyze(self, id, video_bytes: bytes, timestamp: str | None = None):
+        try:
+            # Use PST timezone
+            pst = ZoneInfo("America/Los_Angeles")
+            ts = timestamp or datetime.now(pst).isoformat()
+            ctx = self.ids[id].get("context")
+            
+            video_desc = self.nova_client.describe_video(video_bytes, context=ctx)
+            result = self.nova_client.classify_threat(video_desc, context=ctx)
 
-    def log(self, id, timestamp, severity, description, video_bytes):
-        if id not in self.ids:
-            return 1
-        self.db[id].insert_one({
-            "severity": severity,
-            'timestamp': timestamp,
-            "description": description,
-            "video_bytes": video_bytes
-        })
-        return 0
+            severity = result.get("severity", "normal")
+            threat_type = result.get("threat_type", "other")
+            summary = result.get("summary", "")
+            confidence = result.get("confidence", 0.0)
+            suggested_action = result.get("suggested_action", "")
+
+            if severity == "normal":
+                print(f"[SAFE] {id} @ {ts}: {summary}")
+                return {"status": "safe", **result}
+
+            # Upload video to S3
+            s3_key = f"{id}/{ts.replace(':', '-')}.mp4"
+            self.s3_client.put_object(
+                Bucket=self.s3_bucket,
+                Key=s3_key,
+                Body=video_bytes
+            )
+            
+            # DynamoDB requires Decimal for floats
+            if isinstance(confidence, float):
+                confidence = Decimal(str(confidence))
+            
+            # Store in DynamoDB (with S3 reference instead of video bytes)
+            self.logs_table.put_item(
+                Item={
+                    "stream_id": id,
+                    "timestamp": ts,
+                    "severity": severity,
+                    "threat_type": threat_type,
+                    "summary": summary,
+                    "confidence": confidence,
+                    "suggested_action": suggested_action,
+                    "video_description": video_desc,
+                    "context": ctx or "",
+                    "s3_bucket": self.s3_bucket,
+                    "s3_key": s3_key
+                }
+            )
+            print(f"[LOGGED] {id} @ {ts}: {summary}")
+
+            if severity == "critical":
+                phone = self.ids[id]["critical_phone_number"]
+                if phone:
+                    self.vapi_call(phone, ts, summary)
+                    print(f"[CALLED] {id} @ {ts}: {summary} (called {phone})")
+                    return {"status": "called", **result}
+                else:
+                    print(f"[CRITICAL-NO-CALL] {id} @ {ts}: {summary}")
+                    return {"status": "critical-no-call", **result}
+
+            return {"status": "logged", **result}
+
+        except Exception as e:
+            print(f"[ERROR] {id} @ {timestamp or 'auto'}: {e}")
+            import traceback
+            traceback.print_exc()
+            return {"status": "error", "error": str(e)}
 
     def vapi_call(self, phone_no, timestamp, description):
+        # Convert ISO timestamp to human-readable format in PST
+        try:
+            dt = datetime.fromisoformat(timestamp)
+            readable_time = dt.strftime("%B %d, %Y at %I:%M %p PST")
+        except:
+            readable_time = timestamp
+        
         context = f"""
-        You are an assistant that makes outbound calls to users to notify them of critical events detected by a security system.
-        Inform the user that {description} occurred at {timestamp}."""
+You are an assistant that makes outbound calls to notify users of critical threats detected by an AI security system.
+Inform the user that: {description} (detected on {readable_time})."""
         assistant = self.vapi_client.assistants.create(
             name="Jamie",
             model={
@@ -108,7 +207,7 @@ class master:
                 "messages": [{"role": "system", "content": context}],
             },
             voice={"provider": "11labs", "voiceId": "cgSgspJ2msm6clMCkdW9"},
-            first_message=f"Hey there, I'm calling to inform you that a critical event was detected by your security system at {timestamp}. Do you have time to discuss it now?",
+            first_message=f"Hi, a critical safety issue was detected on {readable_time}: {description}.",
         )
         self.vapi_client.calls.create(
             assistant_id=assistant.id,
@@ -116,23 +215,23 @@ class master:
             customer={"number": phone_no},
         )
 
-master_instance = master('331350eb-8fbb-4b7e-a1ae-172e4736c0f9', '13ee495f-19a9-4692-aefb-4d3c6e9ddf0e')
-master_instance.create_stream(
-    id="stream1",
-    job_description="a retail store entrance",
-    log_cases=[
-        "A customer enters the store."
-    ],
-    critical_cases=[
-        "Someone starts laughing loudly and smiling."
-    ],
-    critical_phone_number="+18584423152"
-)
-with open('backend/vid.mp4', 'rb') as f:
-    master_instance.analyze(
-        id="stream1",
-        video_bytes=base64.b64encode(f.read()).decode('utf-8'),
-        timestamp="2024-10-01T12:00:00Z"
+# Example run
+if __name__ == "__main__":
+    master_instance = master(VAPI_API_KEY, VAPI_PHONE_NUMBER_ID)
+    master_instance.create_stream(
+        id="general_watch",
+        context="surveillance of a house",  
+        critical_phone_number=DEFAULT_CRITICAL_PHONE_NUMBER
     )
+    with open('fire.mp4', 'rb') as f:
+        master_instance.analyze(
+            id="general_watch",
+            video_bytes=f.read(),
+        )
+    
+    # Retrieve logs
+    print("\n--- Stored Logs ---")
+    stream_data = master_instance.get_stream("general_watch")
+    print("Metadata:", stream_data["metadata"])
+    print("Logs:", json.dumps(stream_data["logs"], indent=2, default=str))
 
-master_instance.delete_stream("stream1")
