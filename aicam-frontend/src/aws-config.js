@@ -1,8 +1,8 @@
 export const awsConfig = {
   Auth: {
     Cognito: {
-      userPoolId: 'us-east-1_9OBgI0F3T', // Replace with your User Pool ID
-      userPoolClientId: '2llu1k23bskrmk0fclljoiphmr', // Replace with your App Client ID
+      userPoolId: 'us-east-1_9OBgI0F3T',
+      userPoolClientId: '2llu1k23bskrmk0fclljoiphmr',
       region: 'us-east-1',
       loginWith: {
         email: true,
