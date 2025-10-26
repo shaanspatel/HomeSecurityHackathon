@@ -1,6 +1,6 @@
-# HomeSecurityHackathon
+# Safe Vision
 
-  is an intelligent home security application that combines real-time video monitoring with AI-powered threat detection and automated alerting capabilities.
+Safe Vision is an intelligent home security application that combines real-time video monitoring with AI-powered threat detection and automated alerting capabilities.
 
 ## Features
 
