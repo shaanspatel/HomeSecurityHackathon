@@ -609,7 +609,7 @@ export default function Login({ onLogin }) {
         <div className="login-card">
           <div className="login-header">
             <h1 className="login-logo">SafeVision</h1>
-            <p className="login-tagline">Protecting what matters most</p>
+            <p className="login-tagline">Peace of mind delivered in real time</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
