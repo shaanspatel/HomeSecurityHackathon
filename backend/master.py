@@ -130,17 +130,18 @@ class master:
             video_desc = self.nova_client.describe_video(video_bytes, context=ctx)
             result = self.nova_client.classify_threat(video_desc, context=ctx)
 
-            severity = result.get("severity", "normal")
+            severity = result.get("severity", "normal").lower()
             threat_type = result.get("threat_type", "other")
             summary = result.get("summary", "")
             confidence = result.get("confidence", 0.0)
             suggested_action = result.get("suggested_action", "")
 
-            if severity == "normal":
+            # SAFE: No logging, no action
+            if severity in ["normal", "safe", "none"]:
                 print(f"[SAFE] {id} @ {ts}: {summary}")
                 return {"status": "safe", **result}
 
-            # Upload video to S3
+            # Upload video to S3 for LOG and CRITICAL
             s3_key = f"{id}/{ts.replace(':', '-')}.mp4"
             self.s3_client.put_object(
                 Bucket=self.s3_bucket,
@@ -152,7 +153,7 @@ class master:
             if isinstance(confidence, float):
                 confidence = Decimal(str(confidence))
             
-            # Store in DynamoDB (with S3 reference instead of video bytes)
+            # Store in DynamoDB (for both LOG and CRITICAL)
             self.logs_table.put_item(
                 Item={
                     "stream_id": id,
@@ -170,6 +171,7 @@ class master:
             )
             print(f"[LOGGED] {id} @ {ts}: {summary}")
 
+            # CRITICAL: Log + call
             if severity == "critical":
                 phone = self.ids[id]["critical_phone_number"]
                 if phone:
@@ -180,6 +182,7 @@ class master:
                     print(f"[CRITICAL-NO-CALL] {id} @ {ts}: {summary}")
                     return {"status": "critical-no-call", **result}
 
+            # LOG: Just logged (moderate, low, log, etc.)
             return {"status": "logged", **result}
 
         except Exception as e:
