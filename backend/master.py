@@ -226,7 +226,7 @@ if __name__ == "__main__":
         context="surveillance of a house",  
         critical_phone_number=DEFAULT_CRITICAL_PHONE_NUMBER
     )
-    with open('Screen Recording 2025-10-25 at 5.20.57 PM.mp4', 'rb') as f:
+    with open('fire.mp4', 'rb') as f:
         master_instance.analyze(
             id="general_watch",
             video_bytes=f.read(),

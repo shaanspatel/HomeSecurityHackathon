@@ -24,7 +24,7 @@ function getCookie(name) {
 }
 
 export default function App() {
-  // ============ LOGIN STATE ============
+  // LOGIN STATE
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return localStorage.getItem('aicam_authenticated') === 'true';
   });
@@ -34,7 +34,7 @@ export default function App() {
     return <Login onLogin={() => setIsLoggedIn(true)} />;
   }
 
-  // ============ EXISTING APP CODE ============
+  // EXISTING APP CODE 
   return <Dashboard />;
 }
 
@@ -179,7 +179,7 @@ function Dashboard() {
         });
         if (!stopped) setServerLogs(lines);
       } catch (e) {
-        // optional: pushLog('Failed to fetch logs: ' + e.message);
+        
       }
     };
 
