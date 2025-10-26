@@ -1,0 +1,10 @@
+<svg width="128" height="128" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-labelledby="title">
+  <title>Eye Icon</title>
+  <!-- Outer eye shape -->
+  <path d="M2 12c2.6-4.4 6.5-7 10-7s7.4 2.6 10 7c-2.6 4.4-6.5 7-10 7s-7.4-2.6-10-7z"
+        stroke="#111" stroke-width="2" fill="none" stroke-linejoin="round"/>
+  <!-- Iris -->
+  <circle cx="12" cy="12" r="3.5" fill="#111"/>
+  <!-- Optional pupil highlight -->
+  <circle cx="13.2" cy="10.8" r="0.8" fill="#fff" opacity="0.9"/>
+</svg>
