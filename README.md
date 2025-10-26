@@ -6,7 +6,8 @@ Safe Vision is an intelligent home security application that combines real-time 
 
 ### User Authentication
 - Secure login system with session management
-- Persistent authentication using localStorage
+- Persistent authentication and stores user data using Cognito
+
 
 ### Video Monitoring
 - Real-time camera preview and recording
@@ -45,14 +46,6 @@ Safe Vision is an intelligent home security application that combines real-time 
   - **Bedrock** - AI model inference
   - **S3** - Video storage
   - **DynamoDB** - Metadata and logs
-  - **Cognitor** - Authentication
+  - **Cognito** - Authentication
 - **VAPI** - Phone call automation
-
-## Getting Started
-
-### Prerequisites
-- Node.js 18+ and npm
-- Python 3.9+
-- AWS account with configured credentials
-- VAPI account for phone call alerts
 
