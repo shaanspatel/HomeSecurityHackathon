@@ -8,7 +8,7 @@ def main():
         print(json.dumps({"error": "Stream ID required"}))
         sys.exit(1)
     
-    stream_id = sys.argv[1]
+    stream_id = "general_watch"
     
     try:
         # Initialize master instance

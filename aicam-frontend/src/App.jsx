@@ -60,9 +60,55 @@ function Dashboard() {
     return saved ? JSON.parse(saved) : false;
   });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [testVideoFile, setTestVideoFile] = useState(null);
 
   const pushLog = (msg) => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 300));
+  };
+
+  const handleTestVideoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('video/')) {
+      pushLog('Please select a video file');
+      return;
+    }
+
+    setTestVideoFile(file);
+    pushLog(`Test video selected: ${file.name}`);
+
+    // Upload the test video
+    await uploadTestVideo(file);
+  };
+
+  const uploadTestVideo = async (file) => {
+    try {
+      const form = new FormData();
+      form.append('clip', file, `test-${file.name}`);
+      form.append('device_id', deviceId || getCookie('aicam_session') || 'unknown');
+
+      setStatus('uploading');
+      pushLog('Uploading test video...');
+
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 30_000);
+      const res = await fetch(`${EXPRESS_API_BASE}/api/upload-clip`, { 
+        method: 'POST', 
+        body: form, 
+        credentials: 'include', 
+        signal: ctrl.signal 
+      });
+      clearTimeout(timeout);
+
+      if (!res.ok) throw new Error('upload failed: ' + res.status);
+      const json = await res.json().catch(() => ({}));
+      setStatus('idle');
+      pushLog('Test video uploaded successfully! Logs should update shortly.');
+    } catch (e) {
+      setStatus('error');
+      pushLog('Test video upload failed: ' + e.message);
+    }
   };
 
   const toggleDarkMode = () => {
@@ -391,6 +437,17 @@ function Dashboard() {
             )}
 
             <button onClick={manualCut} className="btn-warning" disabled={!isRecording}>Stop recording & Upload</button>
+            
+            {/* Test Video Upload */}
+            <label className="btn-primary" style={{ cursor: 'pointer' }}>
+              Upload Test Video
+              <input 
+                type="file" 
+                accept="video/*" 
+                onChange={handleTestVideoUpload}
+                style={{ display: 'none' }}
+              />
+            </label>
           </div>
         </div>
 

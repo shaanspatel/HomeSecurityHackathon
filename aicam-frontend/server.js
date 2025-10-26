@@ -58,9 +58,9 @@ app.post('/api/upload-clip', upload.single('clip'), async (req, res) => {
 
     pythonProcess.on('close', (code) => {
       if (code === 0) {
-        console.log(`✅ Video successfully sent to master.py for device: ${deviceId}`);
-        console.log(`📊 Video size: ${(videoBuffer.length / 1024 / 1024).toFixed(2)} MB`);
-        console.log(`📋 Python output: ${result}`);
+        console.log(`Video successfully sent to master.py for device: ${deviceId}`);
+        console.log(`Video size: ${(videoBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+        console.log(`Python output: ${result}`);
         try {
           const parsedResult = JSON.parse(result);
           res.json({ status: 'success', message: 'Video sent to backend for analysis', result: parsedResult });
@@ -68,8 +68,8 @@ app.post('/api/upload-clip', upload.single('clip'), async (req, res) => {
           res.json({ status: 'success', message: 'Video sent to backend for analysis', result: result });
         }
       } else {
-        console.error('❌ Python process error:', error);
-        console.error('📋 Python stderr:', error);
+        console.error('Python process error:', error);
+        console.error('Python stderr:', error);
         res.status(500).json({ error: 'Video processing failed', details: error, stderr: error });
       }
     });
@@ -94,7 +94,7 @@ app.get('/api/whoami', (req, res) => {
 // This Express server only handles video uploads
 
 app.listen(PORT, () => {
-  console.log(`🚀 Express server running on http://localhost:${PORT}`);
-  console.log(`📡 Video upload endpoint available at http://localhost:${PORT}/api/upload-clip`);
-  console.log(`📋 Logs are served by FastAPI server on http://localhost:8000/api/logs`);
+  console.log(`Express server running on http://localhost:${PORT}`);
+  console.log(`Video upload endpoint available at http://localhost:${PORT}/api/upload-clip`);
+  console.log(`Logs are served by FastAPI server on http://localhost:8000/api/logs`);
 });

@@ -206,6 +206,36 @@
   margin-bottom: 32px;
 }
 
+.controls button,
+.controls label {
+  border-radius: 16px;
+  border: none;
+  padding: 14px 28px;
+  font-size: 1rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.3px;
+  text-transform: none;
+  box-shadow: 0 4px 12px var(--shadow-soft);
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.controls button:hover,
+.controls label:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 20px var(--shadow-warm);
+}
+
+.controls button:active,
+.controls label:active {
+  transform: translateY(0) scale(0.98);
+  transition: all 0.1s ease;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, var(--primary-blue), #42A5F5);
   color: white;

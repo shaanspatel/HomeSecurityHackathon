@@ -73,11 +73,8 @@ def convert_to_mp4(video_bytes):
         return video_bytes  # Return original bytes as fallback
 
 def main():
-    if len(sys.argv) != 2:
-        print(json.dumps({"error": "Device ID required"}))
-        sys.exit(1)
     
-    device_id = sys.argv[1]
+    device_id = "general_watch"
     
     try:
         # Initialize master instance
