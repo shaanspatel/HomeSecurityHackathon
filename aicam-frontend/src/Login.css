@@ -142,6 +142,23 @@
     border-color: rgba(255, 80, 80, 0.3);
   }
   
+  .login-success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    text-align: center;
+    font-weight: 500;
+    border: 1px solid #a5d6a7;
+  }
+  
+  .dark-mode .login-success {
+    background: rgba(76, 175, 80, 0.15);
+    color: #81c784;
+    border-color: rgba(76, 175, 80, 0.3);
+  }
+  
   .login-btn {
     padding: 16px;
     background: linear-gradient(135deg, var(--warning-yellow), #FFD54F);

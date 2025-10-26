@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { getCurrentUser, signOut } from 'aws-amplify/auth';
 import './App.css';
 import Login from './Login';
 
@@ -24,17 +25,35 @@ function getCookie(name) {
 }
 
 export default function App() {
-  // LOGIN STATE
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem('aicam_authenticated') === 'true';
-  });
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // If not logged in, show login page
+  useEffect(() => {
+    checkAuthState();
+  }, []);
+
+  async function checkAuthState() {
+    try {
+      await getCurrentUser();
+      setIsLoggedIn(true);
+      localStorage.setItem('aicam_authenticated', 'true');
+    } catch {
+      setIsLoggedIn(false);
+      localStorage.removeItem('aicam_authenticated');
+      localStorage.removeItem('aicam_username');
+    } finally {
+      setIsCheckingAuth(false);
+    }
+  }
+
+  if (isCheckingAuth) {
+    return <div className="loading">Loading...</div>;
+  }
+
   if (!isLoggedIn) {
     return <Login onLogin={() => setIsLoggedIn(true)} />;
   }
 
-  // EXISTING APP CODE 
   return <Dashboard />;
 }
 
@@ -122,11 +141,16 @@ function Dashboard() {
     setIsDropdownOpen(!isDropdownOpen);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('aicam_authenticated');
-    localStorage.removeItem('aicam_username');
-    setIsDropdownOpen(false);
-    window.location.reload(); // Reload to show login page
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      localStorage.removeItem('aicam_authenticated');
+      localStorage.removeItem('aicam_username');
+      setIsDropdownOpen(false);
+      window.location.reload();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   // Init device id + cookie
